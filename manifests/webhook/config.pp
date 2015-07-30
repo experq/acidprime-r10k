@@ -14,7 +14,6 @@ class r10k::webhook::config (
   $bind_address          = $r10k::params::webhook_bind_address,
   $port                  = $r10k::params::webhook_port,
   $access_logfile        = $r10k::params::webhook_access_logfile,
-  $mco_logfile           = $r10k::params::webhook_mco_logfile,
   $client_cfg            = $r10k::params::webhook_client_cfg,
   $use_mco_ruby          = $r10k::params::webhook_use_mco_ruby,
   $protected             = $r10k::params::webhook_protected,
@@ -28,8 +27,10 @@ class r10k::webhook::config (
   $public_key_path       = $r10k::params::webhook_public_key_path,
   $private_key_path      = $r10k::params::webhook_private_key_path,
   $yaml_template         = $r10k::params::webhook_yaml_template,
-  $command_prefix        = $r10k::params::webhook_command_prefix,
+  $command_prefix        = $r10k::params::webhook_r10k_command_prefix,
   $configfile            = '/etc/webhook.yaml',
+  $manage_symlink        = false,
+  $configfile_symlink    = '/etc/webhook.yaml',
 ) inherits r10k::params {
 
   if $hash == 'UNSET' {
@@ -46,7 +47,6 @@ class r10k::webhook::config (
       'certpath'              => $certpath,
       'use_mco_ruby'          => $use_mco_ruby,
       'access_logfile'        => $access_logfile,
-      'mco_logfile'           => $mco_logfile,
       'protected'             => $protected,
       'prefix'                => $prefix,
       'prefix_command'        => $prefix_command,
@@ -70,5 +70,13 @@ class r10k::webhook::config (
     path    => $configfile,
     content => template($yaml_template),
     notify  => Service['webhook'],
+  }
+
+  if $manage_symlink {
+    file { 'symlink_webhook.yaml':
+      ensure => 'link',
+      path   => $configfile_symlink,
+      target => $configfile,
+    }
   }
 }

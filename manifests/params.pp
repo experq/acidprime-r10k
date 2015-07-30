@@ -7,12 +7,12 @@ class r10k::params
   $manage_ruby_dependency = 'declare'
   $install_options        = []
   $sources                = undef
+  $puppet_master          = true
 
   # r10k configuration
   $r10k_config_file          = '/etc/r10k.yaml'
   $r10k_cache_dir            = '/var/cache/r10k'
   $r10k_basedir              = "${::settings::confdir}/environments"
-  $r10k_purgedirs            = $r10k_basedir
   $manage_configfile_symlink = false
   $configfile_symlink        = '/etc/r10k.yaml'
 
@@ -28,12 +28,9 @@ class r10k::params
   $mcollective = false
 
   # Webhook configuration information
-  $webhook_user                  = 'puppet'
-  $webhook_pass                  = 'puppet'
   $webhook_bind_address          = '0.0.0.0'
   $webhook_port                  = '8088'
   $webhook_access_logfile        = '/var/log/webhook/access.log'
-  $webhook_mco_logfile           = '/var/log/webhook/mco_output.log'
   $webhook_certname              = 'peadmin'
   $webhook_certpath              = '/var/lib/peadmin/.mcollective.d'
   $webhook_client_cfg            = '/var/lib/peadmin/.mcollective'
@@ -50,18 +47,49 @@ class r10k::params
   $webhook_private_key_path      = undef
   $webhook_bin_template          = 'r10k/webhook.bin.erb'
   $webhook_yaml_template         = 'r10k/webhook.yaml.erb'
-  $webhook_command_prefix        = '' # 'sudo' is the canonical example for this
+  $webhook_r10k_command_prefix        = 'umask 0022;' # 'sudo' is the canonical example for this
 
   if $::osfamily == 'Debian' {
     $functions_path     = '/lib/lsb/init-functions'
     $start_pidfile_args = '--pidfile=$pidfile'
-  }
-  else {
+  } elsif $::osfamily == 'SUSE' {
+    $functions_path     = '/etc/rc.status'
+  } else {
     $functions_path     = '/etc/rc.d/init.d/functions'
     $start_pidfile_args = '--pidfile $pidfile'
   }
+  
   if $::is_pe == true or $::is_pe == 'true' {
-    # Puppet Enterprise specific settings
+    # < PE 4
+    $is_pe_server      = true
+  }elsif is_function_available('pe_compiling_server_version') {
+    # >= PE 4
+    $is_pe_server      = true
+  }
+  else {
+    # FOSS
+    $is_pe_server      = false
+  }
+
+  if $is_pe_server and versioncmp($::puppetversion, '4.0.0') >= 0 {
+    # PE 4 or greater specific settings
+    $puppetconf_path = '/etc/puppetlabs/puppet'
+
+    $pe_module_path  = '/opt/puppetlabs/puppet/modules'
+    # Mcollective configuration dynamic
+    $mc_service_name = 'mcollective'
+    $plugins_dir     = '/opt/puppetlabs/mcollective/plugins'
+    $modulepath      = "${r10k_basedir}/\$environment/modules:${pe_module_path}"
+    $provider        = 'pe_gem'
+    $r10k_binary     = 'r10k'
+
+    # webhook
+    $webhook_user    = 'peadmin'
+    $webhook_pass    = 'peadmin'
+    $webhook_group   = 'peadmin'
+  }
+  elsif $is_pe_server and versioncmp($::puppetversion, '4.0.0') == -1 {
+    # PE 3.x.x specific settings
     $puppetconf_path = '/etc/puppetlabs/puppet'
 
     $pe_module_path  = '/opt/puppet/share/puppet/modules'
@@ -71,12 +99,24 @@ class r10k::params
     $modulepath      = "${r10k_basedir}/\$environment/modules:${pe_module_path}"
     $provider        = 'pe_gem'
     $r10k_binary     = 'r10k'
-  } else {
-    # Getting ready for FOSS support in this module
+
+    # webhook
+    $webhook_user    = 'peadmin'
+    $webhook_pass    = 'peadmin'
+    $webhook_group   = 'peadmin'
+  }
+  else {
+    # Versions of FOSS prior to Puppet 4 (all in one)
+    # FOSS specific settings
     $puppetconf_path = '/etc/puppet'
 
     # Mcollective configuration dynamic
     $modulepath = "${r10k_basedir}/\$environment/modules"
+
+    # webhook
+    $webhook_user    = 'puppet'
+    $webhook_pass    = 'puppet'
+    $webhook_group   = 'puppet'
 
     case $::osfamily {
       'debian': {
@@ -123,15 +163,19 @@ class r10k::params
   $mc_agent_path       = "${plugins_dir}/agent"
   $mc_application_path = "${plugins_dir}/application"
   $mc_http_proxy       = undef
-  $mc_git_ssl_verify   = 0
+  $mc_git_ssl_verify    = undef # Deprecated parameter - Renamed to $mc_git_ssl_no_verify for clarity
+  $mc_git_ssl_no_verify = 0
 
   # Service Settings for SystemD in EL7
   if $::osfamily == 'RedHat' and $::operatingsystemmajrelease == '7' {
     $webhook_service_file     = '/usr/lib/systemd/system/webhook.service'
-    $webhook_service_template = 'webhook.service.erb'
+    $webhook_service_template = 'webhook.rehat.service.erb'
   } elsif $::osfamily == 'Gentoo' {
     $webhook_service_file     = '/etc/init.d/webhook'
     $webhook_service_template = 'webhook.init.gentoo.erb'
+  } elsif $::osfamily == 'Suse' and $::operatingsystemrelease >= '12' {
+    $webhook_service_file     = '/etc/systemd/system/webhook.service'
+    $webhook_service_template = 'webhook.suse.service.erb'
   } else {
     $webhook_service_file     = '/etc/init.d/webhook'
     $webhook_service_template = 'webhook.init.erb'

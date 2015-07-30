@@ -10,9 +10,10 @@
 # * [*sources*]
 #   Hash containing data sources to be used by r10k to create dynamic Puppet
 #   environments. Default: {}
-# * [*purgedirs*]
-#   An Array of directory paths to purge of any subdirectories that do not
-#   correspond to a dynamic environment managed by r10k. Default: []
+# * [*postrun*]
+#   **Optional:** Array containing the parts of a system call. 
+#   Example: ['/usr/bin/curl', '-F', 'deploy=done', 'http://my-app.site/endpoint']
+#   Default: undef
 # * [*manage_configfile_symlink*]
 #   Boolean to determine if a symlink to the r10k config file is to be managed.
 #   Default: false
@@ -32,10 +33,6 @@
 #        'basedir' => '/some/other/basedir'
 #      },
 #    },
-#    purgedirs => [
-#      "${::settings::confdir}/environments",
-#      '/some/other/basedir',
-#    ],
 #  }
 #
 # == Documentation
@@ -53,7 +50,7 @@ class r10k::config (
   $modulepath                = undef,
   $remote                    = '',
   $sources                   = 'UNSET',
-  $purgedirs                 = [],
+  $postrun                   = undef,
   $puppetconf_path           = $r10k::params::puppetconf_path,
   $r10k_basedir              = $r10k::params::r10k_basedir,
   $manage_configfile_symlink = $r10k::params::manage_configfile_symlink,
@@ -85,6 +82,10 @@ class r10k::config (
 
     $r10k_sources = $sources
     $source_keys = keys($r10k_sources)
+  }
+
+  if $postrun != undef {
+    validate_array($postrun)
   }
 
   file { 'r10k.yaml':

@@ -1,10 +1,15 @@
 # This class creates a github webhoook to allow curl style post-rec scripts
 class r10k::webhook(
-  $user  = 'peadmin',
-  $group = 'peadmin',
-  $git_server = 'localhost',
-  $webhook_bin_template = $::r10k::params::webhook_bin_template,
+  $user             = $r10k::params::webhook_user,
+  $group            = $r10k::params::webhook_group,
+  $bin_template     = $r10k::params::webhook_bin_template,
+  $service_template = $r10k::params::webhook_service_template,
+  $service_file     = $r10k::params::webhook_service_file,
+  $use_mcollective  = $r10k::params::webhook_use_mcollective,
+  $manage_packages  = true,
 ) inherits r10k::params {
+  
+  $is_pe_server = $r10k::params::is_pe_server
 
   File {
     ensure => file,
@@ -29,89 +34,40 @@ class r10k::webhook(
   }
 
   file { 'webhook_init_script':
-    content => template("r10k/${::r10k::params::webhook_service_template}"),
-    path    => $::r10k::params::webhook_service_file,
-    require => Package['sinatra'],
+    content => template("r10k/${service_template}"),
+    path    => $service_file,
     before  => File['webhook_bin'],
   }
 
   file { 'webhook_bin':
-    content => template($webhook_bin_template),
+    content => template($bin_template),
     path    => '/usr/local/bin/webhook',
     notify  => Service['webhook'],
   }
 
   service { 'webhook':
-    ensure    => 'running',
-    enable    => true,
-    pattern   => '.*ruby.*webhoo[k]$',
-    hasstatus => false,
+    ensure  => 'running',
+    enable  => true,
+    pattern => '.*ruby.*webhoo[k]$',
   }
 
-  if $::is_pe == true or $::is_pe == 'true' {
-    if !defined(Package['sinatra']) {
-      package { 'sinatra':
-        ensure   => installed,
-        provider => 'pe_gem',
-        before   => Service['webhook'],
-      }
-    }
+  if $manage_packages {
+    include r10k::webhook::package
+  }
 
-    if versioncmp($::pe_version, '3.7.0') >= 0 {
-
-      if !defined(Package['rack']) {
-        package { 'rack':
-          ensure   => installed,
-          provider => 'pe_gem',
-          before   => Service['webhook'],
-        }
-      }
-
+  # Only managed this file if you are using mcollective mode
+  if $use_mcollective {
+    if $is_pe_server and versioncmp($::puppetversion, '3.7.0') >= 0 {
       # 3.7 does not place the certificate in peadmin's ~
       # This places it there as if it was an upgrade
       file { 'peadmin-cert.pem':
-          ensure  => 'file',
-          path    => '/var/lib/peadmin/.mcollective.d/peadmin-cert.pem',
-          owner   => 'peadmin',
-          group   => 'peadmin',
-          mode    => '0644',
-          content => file('/etc/puppetlabs/puppet/ssl/certs/pe-internal-peadmin-mcollective-client.pem','/dev/null'),
-          notify  => Service['webhook'],
-      }
-    }
-  }
-  else {
-    if !defined(Package['webrick']) {
-      package { 'webrick':
-        ensure   => installed,
-        provider => 'gem',
-        before   => Service['webhook'],
-      }
-    }
-
-    if !defined(Package['json']) {
-      package { 'json':
-        ensure   => installed,
-        provider => 'gem',
-        before   => Service['webhook'],
-      }
-    }
-
-    if !defined(Package['sinatra']) {
-      package { 'sinatra':
-        ensure   => installed,
-        provider => 'gem',
-        before   => Service['webhook'],
-      }
-    }
-
-    if versioncmp($::puppetversion, '3.7.0') >= 0 {
-      if !defined(Package['rack']) {
-        package { 'rack':
-          ensure   => installed,
-          provider => 'gem',
-          before   => Service['webhook'],
-        }
+        ensure  => 'file',
+        path    => '/var/lib/peadmin/.mcollective.d/peadmin-cert.pem',
+        owner   => 'peadmin',
+        group   => 'peadmin',
+        mode    => '0644',
+        content => file("${r10k::params::puppetconf_path}/certs/pe-internal-peadmin-mcollective-client.pem",'/dev/null'),
+        notify  => Service['webhook'],
       }
     }
   }

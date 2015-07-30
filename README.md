@@ -1,7 +1,9 @@
 # r10k Configuration Module
 [![Puppet Forge](http://img.shields.io/puppetforge/v/zack/r10k.svg)](https://forge.puppetlabs.com/zack/r10k)
+[![Build Status](https://travis-ci.org/acidprime/r10k.png?branch=master)](https://travis-ci.org/acidprime/r10k)
 [![Github Tag](https://img.shields.io/github/tag/acidprime/r10k.svg)](https://github.com/acidprime/r10k)
 [![Build Status](https://travis-ci.org/acidprime/r10k.png?branch=master)](https://travis-ci.org/acidprime/r10k)
+[![Gitter](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/acidprime/r10k?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge)
 
 #### Table of Contents
 
@@ -137,7 +139,7 @@ class { 'r10k':
 }
 ```
 _Note: On Puppet Enterprise 3.8 and higher the package is not declared as 3.8
-ships with an embdedded r10k gem installed via the PE packages_
+ships with an embdedded r10k gem installed via the PE packages. To install r10k on a PE 3.8+ non-master, set puppet_master to false for the main r10k class (e.g. to use r10k with Razor)_
 
 ## Usage
 
@@ -414,7 +416,8 @@ git_webhook { 'web_post_receive_webhook_for_module' :
 ### Running without mcollective
 If you have only a single master, you may want to have the webhook run r10k directly rather then
 as peadmin via mcollective. This requires you to run as the user that can perform `r10k` commands
-which is typically root.
+which is typically root. The peadmin certificate no longer is managed or required.
+
 
 ```puppet
 # Instead of running via mco, run r10k directly
@@ -426,9 +429,10 @@ class {'r10k::webhook::config':
 # It will issue r10k deploy environment <branch_from_gitlab_payload> -p
 # When git pushes happen.
 class {'r10k::webhook':
-  user    => 'root',
-  group   => '0',
-  require => Class['r10k::webhook::config'],
+  use_mcollective => false,
+  user            => 'root',
+  group           => '0',
+  require         => Class['r10k::webhook::config'],
 }
 ```
 
@@ -509,9 +513,6 @@ A string to be passed in as the source with a hardcode prefix of `puppet`
 ##### `sources`
 A hash of all sources, this gets read out into the file as yaml. Must not be declared with `remote`
 
-##### `purgedirs`
-A single string setting the `r10k.yaml` configuration value of the same name 
-
 ##### `cachedir`
 A single string setting the `r10k.yaml` configuration value of the same name 
 
@@ -557,6 +558,7 @@ The supported installation modes for this module
 * yum
 * bundle
 * pe_gem
+* puppet_gem
 * gem
 * zypper
 

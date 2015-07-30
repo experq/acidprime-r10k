@@ -1,6 +1,18 @@
 module MCollective
   module Agent
     class R10k<RPC::Agent
+       activate_when do
+         #This helper only activate this agent for discovery and execution
+         #If r10k is found on $PATH.
+         # http://docs.puppetlabs.com/mcollective/simplerpc/agents.html#agent-activation
+         r10k_binary = `which r10k 2> /dev/null`
+         if r10k_binary == ""
+           #r10k not found on path.
+           false
+         else
+           true
+         end
+       end
        ['push',
         'pull',
         'status'].each do |act|
@@ -56,7 +68,7 @@ module MCollective
         git  = ['/usr/bin/env', 'git']
         r10k = ['/usr/bin/env', 'r10k']
         # Given most people using this are using Puppet Enterprise, add the PE Path
-        environment = {"LC_ALL" => "C","PATH" => "#{ENV['PATH']}:<%= if @is_pe == true or @is_pe == 'true' then '/opt/puppet/bin' else '/usr/local/bin' end %>", "http_proxy" => "<%= @http_proxy %>", "https_proxy" => "<%= @http_proxy %>", "GIT_SSL_NO_VERIFY" => "<%= @git_ssl_verify %>" }
+        environment = {"LC_ALL" => "C","PATH" => "#{ENV['PATH']}:<%= if @is_pe == true or @is_pe == 'true' then '/opt/puppet/bin' else '/usr/local/bin' end %>", "http_proxy" => "<%= @http_proxy %>", "https_proxy" => "<%= @http_proxy %>", "GIT_SSL_NO_VERIFY" => "<%= @agent_no_verify %>" }
         case action
           when 'push','pull','status'
             cmd = git

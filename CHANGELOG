@@ -1,3 +1,11 @@
+3.0.0 - Esalberg
+  * Webhook compatibility on non masters servers (razor) #219
+2.8.2 - Jordan Olshevski
+  * Fix for RHEL 7 webhook
+2.8.2 - Jerald Sheets 
+  * Troubleshooting RHEL 7 issues with systemd
+2.8.1 - See Commit History
+  * Multiple Webhook updates for Centos 7 and Debian
 2.8.0 - Tom linkin
   * Support for systemd on EL7 for webhook
 2.7.4 - Rob Nelson

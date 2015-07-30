@@ -1,1 +1,6 @@
-<%= @webhook_hash.to_yaml %>
+---
+<% @webhook_hash.sort.each do |key,value| -%>
+<% if value != :undef -%>
+  <%=key-%>: <%= (value.class == TrueClass  || value.class == FalseClass ) ? value : "\"#{value}\"" %>
+<% end -%>
+<% end -%>
