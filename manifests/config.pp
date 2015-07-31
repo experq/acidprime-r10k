@@ -50,7 +50,6 @@ class r10k::config (
   $modulepath                = undef,
   $remote                    = '',
   $sources                   = 'UNSET',
-  $git                       = {},
   $postrun                   = undef,
   $puppetconf_path           = $r10k::params::puppetconf_path,
   $r10k_basedir              = $r10k::params::r10k_basedir,
@@ -70,7 +69,6 @@ class r10k::config (
   validate_bool($manage_configfile_symlink_real)
 
   validate_absolute_path($configfile_symlink)
-  validate_hash($git)
 
   if $sources == 'UNSET' {
     $r10k_sources  = {

@@ -4,10 +4,6 @@
 <% end -%>
 :cachedir: <%= @cachedir %>
 <% unless @r10k_sources.empty? -%>
-:git:
-<% @git.sort.each do |key,value| -%>
-  <%=key-%>: <%=value%>
-<% end -%>
 :sources:
 <% @source_keys.sort.each do |source| -%>
   <%=source-%>:
