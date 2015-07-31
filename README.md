@@ -2,7 +2,6 @@
 [![Puppet Forge](http://img.shields.io/puppetforge/v/zack/r10k.svg)](https://forge.puppetlabs.com/zack/r10k)
 [![Build Status](https://travis-ci.org/acidprime/r10k.png?branch=master)](https://travis-ci.org/acidprime/r10k)
 [![Github Tag](https://img.shields.io/github/tag/acidprime/r10k.svg)](https://github.com/acidprime/r10k)
-[![Build Status](https://travis-ci.org/acidprime/r10k.png?branch=master)](https://travis-ci.org/acidprime/r10k)
 [![Gitter](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/acidprime/r10k?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge)
 
 #### Table of Contents
@@ -57,8 +56,8 @@ class { 'r10k':
 
 * Installation of the r10k `gem`
 * Installation of git
-* Installation of ruby when not using an existing ruby stack i.e. when using `pe_gem` 
-* Installation of ruby if not using an existing ruby stack i.e. when using  `pe_gem`.
+* Installation of ruby when not using an existing ruby stack i.e. when using `pe_gem` or `puppet_gem` 
+* Installation of ruby if not using an existing ruby stack i.e. when using  `pe_gem` or `puppet_gem`.
 * Management of the `r10k.yaml` in /etc
 * Instllation and configuration of a sinatra app when using the [webhook](#webhook-support). 
 
@@ -131,7 +130,7 @@ ruby using the [puppetlabs/ruby](http://forge.puppetlabs.com/puppetlabs/ruby) mo
 
 It also supports installation via multiple providers, such as installation in the puppet_enterprise ruby stack in versions less than 3.8
 
-Installing into the puppet enterprise ruby stack
+Installing into the puppet enterprise ruby stack in PE 3.x
 ```puppet
 class { 'r10k':
   remote   => 'git@github.com:someuser/puppet.git',
@@ -140,6 +139,17 @@ class { 'r10k':
 ```
 _Note: On Puppet Enterprise 3.8 and higher the package is not declared as 3.8
 ships with an embdedded r10k gem installed via the PE packages. To install r10k on a PE 3.8+ non-master, set puppet_master to false for the main r10k class (e.g. to use r10k with Razor)_
+
+Installing into the Puppet Enterprise ruby stack in PE 2015.x
+```puppet
+class { 'r10k':
+  remote   => 'git@github.com:someuser/puppet.git',
+  provider => 'puppet_gem',
+}
+
+_Note: It is recommended you migrate to using the `pe_r10k` module which is basically
+a clone of this modules features and file tickets for anything missing._
+
 
 ## Usage
 
@@ -230,7 +240,7 @@ The mcollective agent can be configured to supply r10k/git environment `http_pro
 ```puppet
 class { '::r10k::mcollective':
   http_proxy     => 'http://proxy.example.lan:3128',
-  git_ssl_verify => 1,
+  git_ssl_no_verify => 1,
 }
 ```
 
@@ -574,6 +584,22 @@ Install mcollective application and agents. This does NOT configure mcollective 
 ##### `manage_configfile_symlink`
 Manage a symlink to the configuration file, for systems installed in weird file system configurations
 
+##### `git_settings`
+This is the `git:` key in r10k, it accepts a hash that can be used to configure
+rugged support.
+
+```puppet
+    $git_settings = {
+      'provider'    => 'rugged',
+      'private_key' => '/root/.ssh/id_rsa',
+    }
+
+    class {'r10k':
+      remote       => 'git@github.com:acidprime/puppet.git',
+      git_settings => $git_settings,
+    }
+```
+
 ##### `configfile_symlink`
 boolean if to manage symlink
 
@@ -620,6 +646,7 @@ Quickstart:
     gem install bundler
     bundle install
     bundle exec rake spec
+    bundle exec rake lint 
 ```
 
 ####Ruby = 1.8.7
@@ -628,4 +655,7 @@ Quickstart:
     gem install bundler
     bundle install --without system_tests
     bundle exec rake spec
+    bundle exec rake lint 
 ```
+
+Check the .travis.yml for supported Operating System Versions

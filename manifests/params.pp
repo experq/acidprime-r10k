@@ -11,10 +11,17 @@ class r10k::params
 
   # r10k configuration
   $r10k_config_file          = '/etc/r10k.yaml'
-  $r10k_cache_dir            = '/var/cache/r10k'
-  $r10k_basedir              = "${::settings::confdir}/environments"
+
+  if versioncmp($::puppetversion, '4.0.0') >= 0 {
+    $r10k_basedir    = $::settings::environmentpath
+    $r10k_cachedir   = "${::settings::vardir}/r10k"
+  } else {
+    $r10k_basedir    = "${::settings::confdir}/environments"
+    $r10k_cache_dir  = '/var/cache/r10k'
+  }
   $manage_configfile_symlink = false
   $configfile_symlink        = '/etc/r10k.yaml'
+  $git_settings              = {}
 
   # Git configuration
   $git_server = $::settings::ca_server
@@ -58,7 +65,10 @@ class r10k::params
     $functions_path     = '/etc/rc.d/init.d/functions'
     $start_pidfile_args = '--pidfile $pidfile'
   }
-  
+
+  # We check for the function right now instead of $::pe_server_version
+  # which does not get populated on agent nodes as some users use r10k
+  # with razor see https://github.com/acidprime/r10k/pull/219
   if $::is_pe == true or $::is_pe == 'true' {
     # < PE 4
     $is_pe_server      = true
@@ -80,7 +90,7 @@ class r10k::params
     $mc_service_name = 'mcollective'
     $plugins_dir     = '/opt/puppetlabs/mcollective/plugins'
     $modulepath      = "${r10k_basedir}/\$environment/modules:${pe_module_path}"
-    $provider        = 'pe_gem'
+    $provider        = 'puppet_gem'
     $r10k_binary     = 'r10k'
 
     # webhook
@@ -163,13 +173,12 @@ class r10k::params
   $mc_agent_path       = "${plugins_dir}/agent"
   $mc_application_path = "${plugins_dir}/application"
   $mc_http_proxy       = undef
-  $mc_git_ssl_verify    = undef # Deprecated parameter - Renamed to $mc_git_ssl_no_verify for clarity
   $mc_git_ssl_no_verify = 0
 
   # Service Settings for SystemD in EL7
   if $::osfamily == 'RedHat' and $::operatingsystemmajrelease == '7' {
     $webhook_service_file     = '/usr/lib/systemd/system/webhook.service'
-    $webhook_service_template = 'webhook.rehat.service.erb'
+    $webhook_service_template = 'webhook.redhat.service.erb'
   } elsif $::osfamily == 'Gentoo' {
     $webhook_service_file     = '/etc/init.d/webhook'
     $webhook_service_template = 'webhook.init.gentoo.erb'
